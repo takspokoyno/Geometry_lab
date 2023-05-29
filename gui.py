@@ -5,14 +5,16 @@ import csv
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
+import numpy as np
+import largestinteriorrectangle as lir
 
 def generate_random_points(amount):
     min_value = 0
     max_value = 99
     points = []
     for _ in range(amount):
-        x = random.uniform(min_value, max_value)
-        y = random.uniform(min_value, max_value)
+        x = random.randint(min_value, max_value)
+        y = random.randint(min_value, max_value)
         points.append((x, y))
     return points    
 
@@ -21,6 +23,15 @@ def save_points_to_csv(points, filename):
         writer = csv.writer(file)
         writer.writerow(['X', 'Y'])  # Write header
         writer.writerows(points)  # Write points
+
+def save_rectangle_to_csv(points, filename):
+    with open(filename, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['X', 'Y'])  # Write header
+        writer.writerow([points[0], points[1]])
+        writer.writerow([points[0], points[3]-1])
+        writer.writerow([points[2]-1, points[3]-1])
+        writer.writerow([points[2]-1, points[1]]) 
 
 #Calculate the orientation of three points (p, q, r)
 def orientation(p, q, r):
@@ -63,6 +74,20 @@ def graham_scan(points):
 
     return stack 
 
+def largest_rectangle(filename):
+    # Read points from the given_points.csv file
+    points = []
+    with open(filename, mode='r') as file:
+        reader = csv.reader(file)
+        next(reader)  # Skip header
+        for row in reader:
+            x = row[0]
+            y = row[1]
+            points.append([x,y])
+    polygon = np.array([points], np.int32)
+    rectangle = lir.lir(polygon)
+    return rectangle
+
 def create_simple_plot():
     # Read points from the given_points.csv file
     x_coords = []
@@ -73,8 +98,8 @@ def create_simple_plot():
         for row in reader:
             x = row[0]
             y = row[1]
-            x_coords.append(float(x.strip()))  # Extract and append the x coordinate
-            y_coords.append(float(y.strip()))  # Extract and append the y coordinate
+            x_coords.append(int(x.strip()))  # Extract and append the x coordinate
+            y_coords.append(int(y.strip()))  # Extract and append the y coordinate
 
     # Read points from the convex_hull.csv file
     hull_x_coords = []
@@ -85,12 +110,28 @@ def create_simple_plot():
         for row in reader:
             x = row[0]
             y = row[1]
-            hull_x_coords.append(float(x.strip()))  # Extract and append the x coordinate
-            hull_y_coords.append(float(y.strip()))  # Extract and append the y coordinate
+            hull_x_coords.append(int(x.strip()))  # Extract and append the x coordinate
+            hull_y_coords.append(int(y.strip()))  # Extract and append the y coordinate
 
     # Append the first point to the end to close the polygon
     hull_x_coords.append(hull_x_coords[0])
     hull_y_coords.append(hull_y_coords[0])
+
+    # Read points from the convex_hull.csv file
+    rect_x_coords = []
+    rect_y_coords = []
+    with open("largest_rectangle.csv", mode='r') as file:
+        reader = csv.reader(file)
+        next(reader)  # Skip header
+        for row in reader:
+            x = row[0]
+            y = row[1]
+            rect_x_coords.append(int(x.strip()))  # Extract and append the x coordinate
+            rect_y_coords.append(int(y.strip()))  # Extract and append the y coordinate
+
+    # Append the first point to the end to close the polygon
+    rect_x_coords.append(rect_x_coords[0])
+    rect_y_coords.append(rect_y_coords[0])
 
     # Create a new window
     plot_window = tk.Toplevel()
@@ -105,6 +146,9 @@ def create_simple_plot():
 
     # Create a line plot of the convex hull points on the axis
     ax.plot(hull_x_coords, hull_y_coords, 'r-', label='Convex Hull')
+
+    # Create a line plot of the convex hull points on the axis
+    ax.plot(rect_x_coords, rect_y_coords, 'g-', label='Rectangle')
 
     ax.set_xlabel('X-axis')
     ax.set_ylabel('Y-axis')
@@ -132,6 +176,8 @@ def button_auto_click():
     save_points_to_csv(points, "given_points.csv")
     convex_hull = graham_scan(points)
     save_points_to_csv(convex_hull, "convex_hull.csv")
+    rectangle = largest_rectangle("convex_hull.csv")
+    save_rectangle_to_csv(rectangle, "largest_rectangle.csv")
     result_label.config(text="Success!")
     create_simple_plot()
     
@@ -144,7 +190,7 @@ def button_confirm_click():
     try:
         lines = input_text.split("\n")
         for line in lines:
-            x, y = map(float, line.split(","))
+            x, y = map(int, line.split(","))
             points.append((x, y))
     except ValueError:
         result_label.config(text="Invalid input format! Please enter points in CSV format.")
@@ -153,7 +199,9 @@ def button_confirm_click():
     save_points_to_csv(points, "given_points.csv")
     convex_hull = graham_scan(points)
     save_points_to_csv(convex_hull, "convex_hull.csv")
-    result_label.config(text="Convex hull created and saved to 'convex_hull.csv'.")
+    rectangle = largest_rectangle("convex_hull.csv")
+    save_rectangle_to_csv(rectangle, "largest_rectangle.csv")
+    result_label.config(text="Success!")
     create_simple_plot()
 
 def button_manual_click():
